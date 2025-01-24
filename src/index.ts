@@ -500,10 +500,14 @@ async function playVideo(video: string, udpConn: MediaUdp, title?: string) {
             logger.error("Error occurred while playing video:", error);
         }
     } finally {
+        // Reset activity status after video ends, but do NOT disconnect
         udpConn.mediaConnection.setSpeaking(false);
         udpConn.mediaConnection.setVideoStatus(false);
-        await sendFinishMessage();
-        await cleanupStreamStatus();
+
+        // Cleanup should not happen here for shuffle mode
+        if (!streamStatus.playing) {
+            await cleanupStreamStatus(); // Only cleanup when playback is explicitly stopped
+        }
     }
 }
 
@@ -525,7 +529,7 @@ async function cleanupStreamStatus() {
 }
 
 // Function to shuffle and play videos
-async function shuffleAndPlayVideos(udpConn: MediaUdp, message: Message) {
+async function shuffleAndPlayVideos(udpConn: MediaUdp, message: Message | null) {
     try {
         while (true) {
             // Shuffle the videos array
@@ -538,12 +542,12 @@ async function shuffleAndPlayVideos(udpConn: MediaUdp, message: Message) {
             // Play each video in the shuffled list
             for (const video of shuffledVideos) {
                 logger.info(`Playing shuffled video: ${video.name}`);
-                await sendPlaying(message, video.name);
+                if (message) await sendPlaying(message, video.name);
 
                 // Play the video
                 await playVideo(video.path, udpConn, video.name);
 
-                // Break if the command is canceled
+                // If playback is canceled, exit the loop
                 if (command?.isCanceled) {
                     logger.info("Shuffle play canceled");
                     return;
@@ -552,6 +556,10 @@ async function shuffleAndPlayVideos(udpConn: MediaUdp, message: Message) {
         }
     } catch (error) {
         logger.error("Error occurred during shuffle play:", error);
+    } finally {
+        // Reset stream status if playback ends for any reason
+        streamStatus.playing = false;
+        await cleanupStreamStatus();
     }
 }
 
