@@ -137,6 +137,37 @@ streamer.client.on('messageCreate', async (message) => {
 
     if (config.cmdChannelId.includes(message.channel.id)) {
         switch (user_cmd) {
+
+            case 'shuffleplay':
+    {
+        if (streamStatus.joined) {
+            sendError(message, 'Already joined');
+            return;
+        }
+
+        // Join the voice channel
+        await streamer.joinVoice(config.guildId, config.videoChannelId, streamOpts);
+
+        // Create stream
+        const streamShuffleUdpConn = await streamer.createStream(streamOpts);
+
+        streamStatus.joined = true;
+        streamStatus.playing = true;
+        streamStatus.channelInfo = {
+            guildId: config.guildId,
+            channelId: config.videoChannelId,
+            cmdChannelId: message.channel.id
+        };
+
+        // Log shuffle play start
+        logger.info("Starting shuffle play of all videos in the folder");
+
+        // Shuffle and play videos
+        shuffleAndPlayVideos(streamShuffleUdpConn, message);
+    }
+    break;
+
+                
             case 'play':
                 {
                     if (streamStatus.joined) {
@@ -476,6 +507,8 @@ async function playVideo(video: string, udpConn: MediaUdp, title?: string) {
     }
 }
 
+
+
 // Function to cleanup stream status
 async function cleanupStreamStatus() {
     streamer.leaveVoice();
@@ -490,6 +523,38 @@ async function cleanupStreamStatus() {
         cmdChannelId: "",
     };
 }
+
+// Function to shuffle and play videos
+async function shuffleAndPlayVideos(udpConn: MediaUdp, message: Message) {
+    try {
+        while (true) {
+            // Shuffle the videos array
+            const shuffledVideos = [...videos];
+            for (let i = shuffledVideos.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledVideos[i], shuffledVideos[j]] = [shuffledVideos[j], shuffledVideos[i]];
+            }
+
+            // Play each video in the shuffled list
+            for (const video of shuffledVideos) {
+                logger.info(`Playing shuffled video: ${video.name}`);
+                await sendPlaying(message, video.name);
+
+                // Play the video
+                await playVideo(video.path, udpConn, video.name);
+
+                // Break if the command is canceled
+                if (command?.isCanceled) {
+                    logger.info("Shuffle play canceled");
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        logger.error("Error occurred during shuffle play:", error);
+    }
+}
+
 
 // Function to get Twitch URL
 async function getTwitchStreamUrl(url: string): Promise<string | null> {
