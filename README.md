@@ -5,3 +5,6 @@ the removal of youtube/linked media into more of a local media playbot that auto
 
 todo:
 fucking everything :|
+
+working:
+autojoin specified channel, play media on shuffle and leave channel on media file end if no users are present in channel
