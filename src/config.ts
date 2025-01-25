@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 
 dotenv.config()
 
+
+
 const VALID_VIDEO_CODECS = ['VP8', 'H264', 'H265', 'VP9', 'AV1'];
 
 export default {
@@ -76,3 +78,9 @@ function parseBoolean(value: string | undefined): boolean {
             return false;
     }
 }
+
+console.log(`DEBUG: TOKEN=${process.env.TOKEN}`);
+console.log(`DEBUG: PREFIX=${process.env.PREFIX}`);
+console.log(`DEBUG: GUILD_ID=${process.env.GUILD_ID}`);
+console.log(`DEBUG: COMMAND_CHANNEL_ID=${process.env.COMMAND_CHANNEL_ID}`);
+console.log(`DEBUG: VIDEO_CHANNEL_ID=${process.env.VIDEO_CHANNEL_ID}`);
